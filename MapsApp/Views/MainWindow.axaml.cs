@@ -1,43 +1,72 @@
+using Avalonia;
 using Avalonia.Controls;
-using Mapsui.Geometries;
+using Avalonia.Markup.Xaml;
+using Mapsui;
 using Mapsui.Layers;
-using Mapsui.Projection;
-using Mapsui.Projections;
 using Mapsui.Styles;
-using Mapsui.Tiling;
 using Mapsui.UI.Avalonia;
-using Mapsui.UI.Avalonia.Extensions;
-using NetTopologySuite.Geometries;
+using Mapsui.Geometries;
 
-public class MainWindow : Window
+
+namespace MapsApp.Views
 {
-    public MainWindow()
+    public partial class MainWindow : Window
     {
-        // Create a new MapControl
-        var mapControl = new MapControl();
+        public MainWindow()
+        {
+        }
 
-        // Create a new VectorLayer to hold the path data
-        var pathLayer = new VectorLayer("Path");
+        private PointLatLng start;
+        private PointLatLng end;
 
-        // Create a new LineString to represent the path
-        var pathGeometry = new LineString(new[] { SphericalMercator.FromLonLat(new Point(Ax, Ay)), SphericalMercator.FromLonLat(new Point(Bx, By)) });
+        private void OnMapPointerPressed(object sender, PointerPressedEventArgs e)
+        {
+            // Get the clicked point on the map
+            var point = mapControl.ConvertPoint(e.GetPosition(mapControl), mapControl);
 
-        // Create a new Feature to hold the LineString
-        var pathFeature = new Feature { Geometry = pathGeometry };
+            if (start == null)
+            {
+                // Set the start point
+                start = point;
+            }
+            else if (end == null)
+            {
+                // Set the end point
+                end = point;
 
-        // Add the Feature to the VectorLayer
-        pathLayer.Features.Add(pathFeature);
+                // Draw the path between the two points
+                DrawPath(start, end);
 
-        // Add the VectorLayer to the MapControl
-        mapControl.Map.Layers.Add(pathLayer);
+                // Reset the start and end points
+                start = null;
+                end = null;
+            }
+        }
 
-        // Add an OpenStreetMap tile layer to the MapControl
-        mapControl.Map.Layers.Add(OpenStreetMap.CreateTileLayer());
+        private void DrawPath(PointLatLng start, PointLatLng end)
+        {
+            // Create a new map layer
+            var layer = new Mapsui.Layers.Layer();
 
-        // Set the initial map extent
-        mapControl.Map.NavigateTo(SphericalMercator.FromLonLat(new Point(Ax, Ay)), mapControl.Map.Resolutions[10]);
+            // Create a new line feature
+            var line = new Mapsui.Geometries.LineString(new[] { start, end });
 
-        // Add the MapControl to the window
-        Content = mapControl;
+            // Create a new style for the line
+            var style = new Mapsui.Styles.VectorStyle
+            {
+                Line = new Mapsui.Styles.Pen
+                {
+                    Color = Mapsui.Styles.Color.Red,
+                    Width = 2
+                }
+            };
+
+            // Add the line feature to the layer
+            layer.DataSource = new Mapsui.Data.FeatureCollection(new[] { new Mapsui.Data.Feature(line) });
+            layer.Styles.Add(style);
+
+            // Add the layer to the map
+            mapControl.Map.Layers.Add(layer);
+        }
     }
 }
